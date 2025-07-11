@@ -3,6 +3,7 @@ const path = require('path') // 경로 처리 유틸리티
 const cookieParser = require('cookie-parser') // 쿠키 처리 미들웨어
 const morgan = require('morgan') // HTTP 요청 로깅 미들웨어
 const session = require('express-session') // 세션 관리 미들웨어
+const passport = require('passport') // 인증 미들웨어
 require('dotenv').config() // 환경 변수 관리
 const cors = require('cors') // CORS 미들웨어->api 서버는 반드시 설정
 // 라우터 및 기타 모듈 불러오기
@@ -12,8 +13,10 @@ const postRouter = require('./routes/post')
 const pageRouter = require('./routes/page')
 const userRouter = require('./routes/user')
 const { sequelize } = require('./models') // index.js
+const passportConfig = require('./passport') // index.js 가져와서 실행해야함
 
 const app = express()
+passportConfig() //passport  함수 실행
 app.set('port', process.env.PORT || 8002)
 
 // 시퀄라이즈를 사용한 DB연결
@@ -51,6 +54,10 @@ app.use(
       },
    })
 )
+
+//passport 초기화, 세셴연동
+app.use(passport.initialize()) //passport 초기화
+app.use(passport.session()) //passport와 생성해둔 세션 연결
 
 // 라우터 등록
 app.use('/', indexRouter) // localhost:8000/

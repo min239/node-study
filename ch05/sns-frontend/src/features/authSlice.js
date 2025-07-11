@@ -1,50 +1,142 @@
-import{ createSlice, createAsyncThunk } from '@reduxjs/toolkit'
-import { registerUser } from '../api/snsApi'
+import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
+import { checkAuthStatus, loginUser, logoutUser, registerUser } from '../api/snsApi'
 
 /*
-? (optional chaining)
-error = {  } response가 undefined인 상태
-error.response.data 사용시 ,TypeError: (Cannot read properties of undefined)발생
-error.response
+ ?(optional chaining)
+  error = { } // response가 undefined인 상태
+  error.response.data 사용시, TypeError 발생! (Cannot read property 'data' of undefined)
+  error.response?.data?.message 사용시 response와 data가 undefined여도 에러가 발생하지 X
 */
 
-//회원가입
-export const registerUserThunk = createAsyncThunk('auth/registerUser',async(userData, {rejectWithValue}) => {
-    //userData: 회원가입 정보
-    try {
-    const response = await registerUser(userData)
-    return response.data.user//회원가입 성공시 사용자 정보 반환, auth.js에서 user 가지고옴
-    } catch (error) {
-        return rejectWithValue(error.response?.data?.message) //catch문에서 에러를 처리
-        // error.response?.data?.message: 에러 메시지 -> auth.js에서 이미 존재하는 사용자입니다
-    }
+// rejectWithValue(에러메세지): 에러메세지를 rejected에 action.payload로 전달할때 사용
+
+// 회원가입
+export const registerUserThunk = createAsyncThunk('auth/registerUser', async (userData, { rejectWithValue }) => {
+   // userData: 회원가입 정보
+   try {
+      console.log('userData: ', userData)
+      const response = await registerUser(userData)
+      return response.data.user
+   } catch (error) {
+      console.log(error)
+      return rejectWithValue(error.response?.data?.message)
+   }
 })
+
+// 로그인
+export const loginUserThunk = createAsyncThunk('auth/loginUser', async (credentials, { rejectWithValue }) => {
+   try {
+      const response = await loginUser(credentials)
+      return response.data.user
+   } catch (error) {
+      return rejectWithValue(error.response?.data?.message)
+   }
+})
+
+// 로그아웃
+// _(언더바)는 매개변수 값이 없을 때 사용
+export const logoutUserThunk = createAsyncThunk('auth/logoutUser', async (_, { rejectWithValue }) => {
+   try {
+      const response = await logoutUser()
+      return response.data
+   } catch (error) {
+      return rejectWithValue(error.response?.data?.message)
+   }
+})
+
+// 로그인 상태확인
+export const checkAuthStatusThunk = createAsyncThunk('auth/checkAuthStatus', async (_, { rejectWithValue }) => {
+   try {
+      const response = await checkAuthStatus() // 로그인 상태 확인 API 호출
+      // response.data는 { isAuthenticated: true/false, user: userInfo }
+      return response.data
+   } catch (error) {
+      return rejectWithValue(error.response?.data?.message) //app.js에서 에러메시지를 받아서 처리할 수 있도록 한다
+   }
+})
+
 const authSlice = createSlice({
-    name: 'auth',
-    initialState: {
-        user: null, // 사용자 정보객체
-        isAuthenticated: false, //로그인 상태 (true:로그인, false:로그아웃)
-        loading: false,
-        error: null,
-    },
-     reducers: {},
-     extraReucers: (builder) => {
-        builder
-           .addCase(registerUserThunk.pending, (state) => {
+   name: 'auth',
+   initialState: {
+      user: null, // 사용자 정보 객체
+      isAuthenticated: false, // 로그인 상태(true: 로그인, false: 로그아웃)
+      loading: false,
+      error: null,
+   },
+   reducers: {
+      //error state 초기화 해주는 함수
+      clearAuthError: (state) => {
+         state.error = null // 에러 초기화
+      },
+   },
+   extraReducers: (builder) => {
+      builder
+         // 회원가입
+         .addCase(registerUserThunk.pending, (state) => {
             state.loading = true
             state.error = null
-           })
-           .addCase(registerUserThunk.pending, (state, action) => {
+         })
+         .addCase(registerUserThunk.fulfilled, (state, action) => {
             state.loading = false
-            state.user = action.payload //회원가입 성공시 사용자 정보 저장, auth.js에서 가지왔던 데이터 user에 들어감
-            
-           })
-           .addCase(registerUserThunk.pending, (state, action) => {
-              state.loading = false
-              state.error = action.payload //회원가입 실패시 에러 메시지 저장 이미 존재하는 사용자입니다
-           })
-
-     },
+            state.user = action.payload
+         })
+         .addCase(registerUserThunk.rejected, (state, action) => {
+            state.loading = false
+            state.error = action.payload
+         })
+         // 로그인
+         .addCase(loginUserThunk.pending, (state) => {
+            state.loading = true
+            state.error = null
+         })
+         .addCase(loginUserThunk.fulfilled, (state, action) => {
+            state.loading = false
+            state.isAuthenticated = true
+            state.user = action.payload
+         })
+         .addCase(loginUserThunk.rejected, (state, action) => {
+            state.loading = false
+            state.error = action.payload
+         })
+         // 로그아웃
+         .addCase(logoutUserThunk.pending, (state) => {
+            state.loading = true
+            state.error = null
+         })
+         .addCase(logoutUserThunk.fulfilled, (state) => {
+            state.loading = false
+            state.isAuthenticated = false
+            state.user = null // 로그아웃 후 유저 정보 초기화
+         })
+         .addCase(logoutUserThunk.rejected, (state, action) => {
+            state.loading = false
+            state.error = action.payload
+         })
+         // 로그인 상태 확인
+         //checkAuthStatusThunk 새로고침시 로그인 상태를 확인하기 위해 사용
+         // 서버에서 현재 로그인 상태를 확인하고, 그에 따라 isAuthenticated와 user 상태를 업데이트한다
+         // 이 액션은 페이지가 로드될 때마다 실행되며, 로그인 상태를 확인하는 데 사용된다     
+   
+         // 로그인 상태 확인은 페이지가 로드될 때마다 실행되므로, pending 상태를 설정하여 로딩 상태를 관리한다
+       
+         .addCase(checkAuthStatusThunk.pending, (state) => {
+            state.loading = true
+            state.error = null
+         })
+         .addCase(checkAuthStatusThunk.fulfilled, (state, action) => {
+            state.loading = false
+            // 로그인 상태일지 로그아웃 상태일지 모르기 때문에 아래와 같이 값을 준다
+            state.isAuthenticated = action.payload.isAuthenticated
+            state.user = action.payload.user || null
+         })
+         .addCase(checkAuthStatusThunk.rejected, (state, action) => {
+            state.loading = false
+            state.error = action.payload
+            state.isAuthenticated = false
+            state.user = null
+         })
+   },
 })
 
+export const { clearAuthError } = authSlice.actions
 export default authSlice.reducer
