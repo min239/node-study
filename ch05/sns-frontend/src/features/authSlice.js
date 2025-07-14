@@ -115,10 +115,10 @@ const authSlice = createSlice({
          // 로그인 상태 확인
          //checkAuthStatusThunk 새로고침시 로그인 상태를 확인하기 위해 사용
          // 서버에서 현재 로그인 상태를 확인하고, 그에 따라 isAuthenticated와 user 상태를 업데이트한다
-         // 이 액션은 페이지가 로드될 때마다 실행되며, 로그인 상태를 확인하는 데 사용된다     
-   
+         // 이 액션은 페이지가 로드될 때마다 실행되며, 로그인 상태를 확인하는 데 사용된다
+
          // 로그인 상태 확인은 페이지가 로드될 때마다 실행되므로, pending 상태를 설정하여 로딩 상태를 관리한다
-       
+
          .addCase(checkAuthStatusThunk.pending, (state) => {
             state.loading = true
             state.error = null

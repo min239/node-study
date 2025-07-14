@@ -1,11 +1,11 @@
 import { Container } from '@mui/material'
-import Signup from '../components/auth/Signup'
-function SignupPage() {
-   return (
-      <Container maxWidth="md">
-         <Signup />
-      </Container>
-   )
+import Login from '../components/auth/Login';
+function LoginPage() {
+    return ( 
+        <Container maxWidth='md'>
+            <Login />
+        </Container>
+     );
 }
 
-export default SignupPage
+export default LoginPage;

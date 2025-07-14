@@ -3,9 +3,11 @@ const passport = require('passport') // 인증 미들웨어
 const bcrypt = require('bcrypt') // 비밀번호 암호화를 위한 bcrypt 모듈
 const router = express.Router()
 const User = require('../models/user') // User 모델 불러오기
+const { isLoggedIn, isNotLoggedIn } = require('./middlewares')
 
-//회원가입 localhost:8000/auth
-router.post('/join', async (req, res, next) => {
+//회원가입 localhost:8000/auth/join
+// 로그인이 안된 상태일때만 회원가입을 진행하도록 한다
+router.post('/join', isNotLoggedIn, async (req, res, next) => {
    /*req.body에는 클라이언트에서 전달된 회원가입 정보가 담겨있음
    예: {email: , nick:, password:}
     */
@@ -55,7 +57,8 @@ router.post('/join', async (req, res, next) => {
 })
 
 //로그인 localhost:8000/auth/login 버튼누르면 여기로
-router.post('/login', async (req, res, next) => {
+// 로그인이 안된 상태일때만 로그인을 하도록 한다
+router.post('/login', isNotLoggedIn, async (req, res, next) => {
    passport.authenticate('local', (authError, user, info) => {
       //authenticate은 localStrategy를 사용하여 인증을 수행, 함수는 localStrategy.js에 작성한 인증과정을 실행!! 한다. 그 과정에서 에러발생시 authError객체에 값을 주고, 인증 과정 성공시 user에는 인증과정에서 passport에 넘겨줬던 exUser값이 들어있다
       if (authError) {
@@ -93,7 +96,8 @@ router.post('/login', async (req, res, next) => {
    })(req, res, next)
 })
 //로그아웃localhost:8000/auth/logout
-router.get('/logout', async (req, res, next) => {
+// 로그인이 된 상태일때만 로그아웃을 하도록 한다
+router.get('/logout', isLoggedIn, async (req, res, next) => {
    req.logout((logoutError) => {
       if (logoutError) {
          //로그아웃 상태로 바꾸는 중 에러 발생시
@@ -118,7 +122,7 @@ router.get('/status', async (req, res, next) => {
          //req.isAuthenticated()가 true이면 로그인 상태, false이면 로그인 상태가 아님
          //로그인 되었을 때
          //req.user는 passpaort의 역직렬화 설정에 의해 로그인 되었을 떄 로그인 한 user정보를 가져온다
-         
+
          res.status(200).json({
             isAuthenticated: true, //로그인 상태
             user: {

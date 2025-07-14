@@ -23,6 +23,5 @@ module.exports = () => {
    })
 
    local() //localStrategy.js에서 export된 함수(인증과정함수)를 passport에 추가
-    //passport에 추가된 localStrategy를 사용하여 로그인 인증을 처리
-
+   //passport에 추가된 localStrategy를 사용하여 로그인 인증을 처리
 }
