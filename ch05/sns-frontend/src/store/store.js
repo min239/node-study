@@ -5,7 +5,7 @@ import postReducer from '../features/postSlice'
 const store = configureStore({
    reducer: {
       auth: authReducer, // authSlice에서 만든 리듀서를 등록
-      post: postReducer, // postSlice에서 만든 리듀서를 등록
+      posts: postReducer, // postSlice에서 만든 리듀서를 등록
    },
 })
 

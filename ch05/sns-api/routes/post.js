@@ -40,10 +40,9 @@ const upload = multer({
 // 게시물 등록 localhost:8000/post
 // <input type='file' name='img'>
 router.post('/', isLoggedIn, upload.single('img'), async (req, res, next) => {
-   //img가 nmae 속성, single는 단일 파일 업로드를 의미 singles는 여러개의 파일 업로드를 의미
    try {
-      console.log('파일정보:', req.file) // 업로드 된 파일 정보 확인
-      console.log('formdata:', req.body) // formData에 담긴 데이터 확인
+      console.log('파일정보:', req.file)
+      console.log('formData:', req.body)
 
       // 업로드 된 파일이 없을경우
       if (!req.file) {
@@ -79,11 +78,11 @@ router.post('/', isLoggedIn, upload.single('img'), async (req, res, next) => {
          const result = await Promise.all(
             hashtags.map((tag) =>
                Hashtag.findOrCreate({
-                  where: { title: tag.slice(1) }, //#을 제외한 문자열만 가져온다,여행과 맛집이 들어간다
+                  where: { title: tag.slice(1) }, //#을 제외한 문자만
                })
             )
          )
-         //post_id와  hashtag_id를 연결하는 교차 테이블인 posthashtag 테이블
+
          // posthashtag 테이블(교차테이블)에 insert
 
          /*
@@ -117,7 +116,7 @@ router.post('/', isLoggedIn, upload.single('img'), async (req, res, next) => {
          //  await post.addHashtag(HashTagInstance1)
       }
 
-      res.status(200).json({ //response 데이터 postSlice.js에서 사용
+      res.status(200).json({
          success: true,
          post: {
             id: post.id,
@@ -130,7 +129,7 @@ router.post('/', isLoggedIn, upload.single('img'), async (req, res, next) => {
    } catch (error) {
       error.status = 500
       error.message = '게시물 등록 중 오류가 발생했습니다.'
-      next(error) // 에러가 발생하면 에러 미들웨어로 전달(app.js에서 설정한 에러 미들웨어로 전달)
+      next(error)
    }
 })
 
@@ -167,6 +166,56 @@ router.get('/:id', async (req, res, next) => {
 // 전체 게시물 불러오기(페이징 기능) localhost:8000/post?page=1&limit=3
 router.get('/', async (req, res, next) => {
    try {
+      // parseInt('08', 10) -> 10진수 8을 반환
+      const page = parseInt(req.query.page, 10) || 1 // page 번호(기본값 1)
+      const limit = parseInt(req.query.limit, 10) || 3 // 한페이지당 나타낼 게시물 갯수(기본값 3)
+      const offset = (page - 1) * limit // 오프셋 계산
+
+      // 1. 게시물 레코드의 전체 갯수 가져오기
+      const count = await Post.count()
+
+      /*
+      page:1, limit:3, offset:0 -> 0개의 레코드를 건너띄고 3개의 최신 레코드를 가져온다
+      select * from posts order by createdAt desc limit 3 offset 0
+      
+      page:2, limit:3, offset:3 -> 3개의 레코드를 건너띄고 4번째부터 3개의 최신 레코드를 가져온다
+      select * from posts order by createdAt desc limit 3 offset 3
+
+      page:3, limit:3, offset:6 -> 6개의 레코드를 건너띄고 7번째부터 3개의 최신 레코드를 가져온다
+      select * from posts order by createdAt desc limit 3 offset 6
+      
+      */
+      // 2. 게시물 레코드 가져오기
+      const posts = await Post.findAll({
+         limit,
+         offset,
+         order: [['createdAt', 'DESC']], // 게시물을 최근 날짜 순으로 가져온다
+         // 게시글 작성한 사람과 게시글에 작성된 해시태그를 같이 가져온다
+         include: [
+            {
+               model: User,
+               attributes: ['id', 'nick', 'email'],
+            },
+            {
+               model: Hashtag,
+               attributes: ['title'],
+            },
+         ],
+      })
+
+      console.log('posts: ', posts)
+
+      res.status(200).json({
+         success: true,
+         posts,
+         pagination: {
+            totalPosts: count, // 전체 게시물 수
+            currentPage: page, // 현재 페이지
+            totalPages: Math.ceil(count / limit), // 총 페이지 수
+            limit, // 페이지당 게시물 수
+         },
+         message: '전체 게시물 리스트를 성공적으로 불러왔습니다.',
+      })
    } catch (error) {
       error.status = 500
       error.message = '게시물 리스트를 불러오는 중 오류가 발생했습니다.'

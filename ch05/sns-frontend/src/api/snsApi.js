@@ -21,7 +21,7 @@ export const registerUser = async (userData) => {
    try {
       // userData: 회원가입 창에서 입력한 데이터
       // localhost:8000/auth/join
-      console.log('userData: ', userData) 
+      console.log('userData: ', userData)
       const response = await snsApi.post('/auth/join', userData)
 
       console.log('response: ', response) // response: {data: {user: {id, email, nick}}}
@@ -74,7 +74,7 @@ export const createPost = async (postData) => {
    try {
       //postData: 등록할 게시물 데이터가 담겨져 있는 formData 객체
       // postData는 PostCreateForm에서 생성한 FormData 객체
-      console.log('postData: ', postData) // {content: '게시물 내용', img: File 객체(이미지 파일)}, 
+      console.log('postData: ', postData) // {content: '게시물 내용', img: File 객체(이미지 파일)},
       // localhost:8000/post
       //! 서버에 파일 전송시 반드시 해야하는 headers 설정
       const config = {
@@ -84,8 +84,21 @@ export const createPost = async (postData) => {
       }
       const response = await snsApi.post('/post', postData, config) //post.js에서 설정한 주소로 요청
       return response // response: {data: {success: true, post: {id, content, img, userId}, message: '게시물이 성공적으로 등록되었습니다.'}}
-   } catch (error) { //에러 발생시 catch에서 처리
+   } catch (error) {
+      //에러 발생시 catch에서 처리
       console.error(`API Request 오류: ${error}`)
       throw error // 에러를 던져서 호출한 곳에서 처리할 수 있도록 함(postSlice.js에서 처리)
+   }
+}
+
+//전체 포스트 가져오기(페이징)
+export const getPosts = async (page) => {
+   try {
+      //page번호
+      const response = await snsApi.get(`/post?page=${page}`)
+      return response
+   } catch (error) {
+      console.error(`API Request 오류: ${error}`)
+      throw error
    }
 }

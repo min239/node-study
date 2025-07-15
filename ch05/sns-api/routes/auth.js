@@ -75,7 +75,7 @@ router.post('/login', isNotLoggedIn, async (req, res, next) => {
       }
       //인증이 정상적으로 되고 사용자를 로그인 상태로 바꿈 exUser값이 user에 담겨있다
 
-      req.logIn(user, (loginError) => {
+      req.login(user, (loginError) => {
          if (loginError) {
             //로그인 상태로 바꾸는 중 오류 발생 시
             loginError.status = 500
