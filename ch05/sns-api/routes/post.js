@@ -4,6 +4,7 @@ const path = require('path')
 const fs = require('fs')
 const { Post, Hashtag, User } = require('../models')
 const { isLoggedIn } = require('./middlewares')
+const { title } = require('process')
 const router = express.Router()
 
 // uploads 폴더가 없을 경우 폴더 생성
@@ -136,6 +137,60 @@ router.post('/', isLoggedIn, upload.single('img'), async (req, res, next) => {
 // 게시물 수정 localhost:8000/post/:id
 router.put('/:id', isLoggedIn, upload.single('img'), async (req, res, next) => {
    try {
+      //1게시물 존재 여부 확인
+      //select * from posts wgere id = ? and user_id =? limit 1
+      const post = await Post.findOne({
+         where: { id: req.params.id, user_id: req.user.id },
+      })
+
+      //게시물이 존재하지 않는다면
+      if (!post) {
+         const error = new Error('게시물을 찾을 수 없습니다.')
+         error.status = 404
+         return next(error)
+      }
+
+      //post테이블 수정
+      await post.update({
+         content: req.body.content,
+         img: req.file ? `/${req.file.filename}` : post.img, //수정된 이미가 있으면 바로 바꿈
+      })
+
+      //hashtags테이블 수정
+      const hashtags = req.body.hashtags.match(/#[^\s#]*/g) // #을 기준으로 해시태그 추출
+
+      if (hashtags) {
+         const result = await Promise.all(
+            hashtags.map((tag) =>
+               Hashtag.findOrCreate({
+                  where: { title: tag.slice(1) }, //#을 제외한 문자만
+               })
+            )
+         )
+         //posthashtags 테이블(교차 테이블) 수정
+         await post.setHashtags(result.map((r) => r[0]))
+         //setHashtags 안에 여러개가 있기 때문에 s
+      }
+
+      //수정한 게시물 다시 조회(선택사항)
+      const updatedPost = await Post.findOne({
+         where: { id: req.params.id },
+         include: [
+            {
+               model: User,
+               attributes: ['id', 'nick'], //user테이블의 id,nick컬럼값만 가져옴
+            },
+            {
+               model: Hashtag,
+               attributes: ['title'], //hashtags 테이블의 title컬럼값만 가져옴
+            },
+         ],
+      })
+      res.status(200).json({
+         success: true,
+         post: updatedPost,
+         message: '게시물이 성공적으로 수정되었습니다.',
+      })
    } catch (error) {
       error.status = 500
       error.message = '게시물 수정 중 오류가 발생했습니다.'
@@ -143,19 +198,36 @@ router.put('/:id', isLoggedIn, upload.single('img'), async (req, res, next) => {
    }
 })
 
-// 게시물 삭제 localhost:8000/post/:id
-router.delete('/:id', isLoggedIn, async (req, res, next) => {
-   try {
-   } catch (error) {
-      error.status = 500
-      error.message = '게시물 삭제 중 오류가 발생했습니다.'
-      next(error)
-   }
-})
 
 // 특정 게시물 불러오기(id로 게시물 조회) localhost:8000/post/:id
 router.get('/:id', async (req, res, next) => {
    try {
+      const post = await Post.findOne({
+         where: { id: req.params.id }, //id를 기준으로 데이터를 가지고 옴
+         include: [
+            {
+               model: User,
+               attributes: ['id', 'nick'],
+            },
+            {
+               model: Hashtag,
+               attributes: ['title'],
+            },
+         ],
+      })
+
+      //게시물을 가지고 오지 못했을 때
+      if (!post) {
+         const error = new Error('게시물을 찾을 수 없습니다.')
+         error.status = 404
+         return next(error)
+      }
+
+      res.status(200).json({
+         success: true,
+         post,
+         message: '게시물을 성공적으로 불러왔습니다.',
+      })
    } catch (error) {
       error.status = 500
       error.message = '특정 게시물을 불러오는 중 오류가 발생했습니다.'
@@ -163,7 +235,7 @@ router.get('/:id', async (req, res, next) => {
    }
 })
 
-// 전체 게시물 불러오기(페이징 기능) localhost:8000/post?page=1&limit=3
+// 전체 게시물 불러오기(페이징 기능) localhost:8000/post?page=1
 router.get('/', async (req, res, next) => {
    try {
       // parseInt('08', 10) -> 10진수 8을 반환
@@ -219,6 +291,35 @@ router.get('/', async (req, res, next) => {
    } catch (error) {
       error.status = 500
       error.message = '게시물 리스트를 불러오는 중 오류가 발생했습니다.'
+      next(error)
+   }
+})
+
+//게시물 삭제 localhost:8000/post/id:
+router.delete('/:id', isLoggedIn, async (req, res, next) => {
+   try {
+      //1.삭제할 게시물 존재 여부 확인
+      //select * from posts where id = ? and user_id =? limit 1 req.user index.js에서
+      const post = await Post.findOne({
+         where: { id: req.params.id, user_id: req.user.id },
+      })
+
+      if (!post) {
+         const error = new Error('게시물을 찾을 수 없습니다.')
+         error.status = 404
+         return next(error)
+      }
+
+      //게시물 삭제
+      await post.destroy()
+
+      res.status(200).json({
+         success: true,
+         message: '게시물이 성공적으로 삭제 되었습니다.',
+      })
+   } catch (error) {
+      error.status = 500
+      error.message = '게시물 삭제 중 오류가 발생했습니다.'
       next(error)
    }
 })
