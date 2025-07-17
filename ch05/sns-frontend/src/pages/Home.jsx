@@ -13,7 +13,7 @@ function Home({ isAuthenticated, user }) {
       dispatch(fetchPostsThunk(page)) // 전체 게시물 리스트 가져오기
    }, [dispatch, page])
 
-   //페이지변경
+   // 페이지 변경
    const handlePageChange = (event, value) => {
       setPage(value)
    }
@@ -43,12 +43,10 @@ function Home({ isAuthenticated, user }) {
                ))}
                <Stack spacing={2} sx={{ mt: 3, alignItems: 'center' }}>
                   <Pagination
-                     count={pagination.totalPages} //총페이지 수
-                     page={page}
-                     onChange={handlePageChange}
+                     count={pagination.totalPages} // 총 페이지 수
+                     page={page} // 현재 페이지
+                     onChange={handlePageChange} // 페이지를 변경할 함수
                   />
-                  {/* count={10} 페이지 10개 보여줌 */}
-                  {/* totalpage:총페이지 수 post.js에서 */}
                </Stack>
             </>
          ) : (
