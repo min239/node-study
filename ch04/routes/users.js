@@ -70,7 +70,7 @@ and u.id = :id;
          },
       })
      console.log(comments) // 가져온 댓글 데이터를 콘솔에 출력
-     res.status(200).json(comments) // 가져온 댓글 데이터를 JSON 형태로 응
+     res.status(200).json(comments) // 가져온 댓글 데이터를 JSON 형태
   } catch (error) {
      console.error(error)
      next(error) // app.js의 에러 처리 미들웨어로 전달됨
